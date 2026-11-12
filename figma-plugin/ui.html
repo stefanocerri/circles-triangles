@@ -1,0 +1,266 @@
+<style>
+  :root { color-scheme: dark; --bg: #000; --el: #111; --line: #2a2a2a; --line2: #444; --tx: #fff; --mu: #8a8a8a; }
+  body { font: 13px/1.45 Inter, system-ui, sans-serif; margin: 0; padding: 20px; color: var(--tx); background: var(--bg); -webkit-font-smoothing: antialiased; }
+  h1 { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 18px; display: flex; align-items: center; gap: 10px; }
+  #drop { border: 1px dashed var(--line2); border-radius: 4px; padding: 32px 16px; text-align: center; cursor: pointer; color: var(--mu); background: var(--el); transition: border-color .15s, background .15s; }
+  #drop:hover { border-color: var(--tx); }
+  #drop.over { border-color: var(--tx); border-style: solid; background: #1a1a1a; }
+  #drop b { display: block; font-size: 14px; font-weight: 600; color: var(--tx); margin-bottom: 6px; }
+  label { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; color: #ddd; cursor: pointer; }
+  input[type=checkbox] { appearance: none; flex: none; width: 16px; height: 16px; margin: 1px 0 0; border: 1px solid var(--line2); border-radius: 3px; background: var(--bg); cursor: pointer; display: grid; place-content: center; }
+  input[type=checkbox]:checked { background: var(--tx); border-color: var(--tx); }
+  input[type=checkbox]:checked::after { content: ''; width: 8px; height: 4px; border: solid #000; border-width: 0 0 2px 2px; transform: translateY(-1px) rotate(-45deg); }
+  input[type=checkbox]:focus-visible, button:focus-visible, select:focus-visible { outline: 1px solid var(--tx); outline-offset: 2px; }
+  #fonts { display: none; margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .font { border: 1px solid var(--line); border-radius: 4px; padding: 12px; margin-bottom: 10px; background: var(--el); }
+  .font .hd { font-weight: 600; margin-bottom: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .font a { color: var(--mu); text-decoration: none; font-weight: 400; margin-left: 8px; }
+  .font a:hover { color: var(--tx); }
+  .font select { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid var(--line2); border-radius: 3px; background: var(--bg); color: var(--tx); font: inherit; font-size: 12px; }
+  .cmp { display: flex; align-items: flex-start; gap: 8px; }
+  .cmp.nosample .box, .cmp.nosample .arrow, .cmp.nosample .side:first-child { display: none; }
+  .side { flex: 1; min-width: 0; }
+  .side .lbl { color: var(--mu); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 5px; }
+  .box { height: 64px; background: #f4f4f4; border-radius: 3px; overflow: hidden; display: flex; align-items: center; padding: 0 6px; white-space: nowrap; color: #111; }
+  .box img { display: block; flex: none; }
+  .arrow { padding-top: 38px; font-size: 16px; color: var(--mu); }
+  .cap { font-size: 11px; color: var(--mu); margin-top: 4px; }
+  .side select { margin-top: 6px; }
+  .muted { color: var(--mu); font-size: 11px; }
+  #fonts p { margin: 0 0 12px; color: var(--mu); }
+  #fonts p b { color: var(--tx); font-weight: 600; }
+  button { width: 100%; padding: 10px; margin-top: 12px; border: 1px solid var(--tx); border-radius: 4px; background: var(--tx); color: #000; font: inherit; font-weight: 600; cursor: pointer; transition: background .15s, color .15s; }
+  button:hover { background: var(--bg); color: var(--tx); }
+  #status { margin-top: 16px; white-space: pre-wrap; word-break: break-word; max-height: 140px; overflow: auto; color: #ddd; font-size: 12px; }
+  #status:not(:empty) { border-left: 2px solid var(--tx); padding-left: 10px; }
+  .err { color: #ff6b6b; }
+  #status.err { border-left-color: #ff6b6b; }
+  ::-webkit-scrollbar { width: 8px; } ::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 4px; }
+</style>
+<h1><svg viewBox="0 0 128 128" width="22" height="22" aria-hidden="true"><path d="M64 14 L119 109 H9 Z" fill="#000" stroke="#fff" stroke-width="6" stroke-linejoin="round"/><circle cx="64" cy="77" r="22" fill="#000" stroke="#fff" stroke-width="6"/></svg>Circles&amp;Triangles</h1>
+<div id="drop">
+  <b>Premi ⌘V per incollare la cattura</b>
+  oppure trascina qui il file .json (o clicca per sceglierlo)
+</div>
+<input type="file" id="file" accept=".json,application/json" hidden>
+<label><input type="checkbox" id="al" checked> Auto layout</label>
+<label><input type="checkbox" id="fx" checked> Testi con effetti che Figma non sa rifare (assi variabili, corsivo simulato, skew) come immagine</label>
+<div id="fonts">
+  <p>Questi font del sito non sono installati. Scegli un font tra quelli che hai, oppure <b>Immagine dal sito</b>: il testo arriva identico ma come immagine, con il testo vero in un livello nascosto sotto. ↗ apre dove scaricarlo; per prenderlo direttamente dal sito usa <b>Installa font.command</b> nella cartella tools. La scelta viene ricordata.</p>
+  <div id="ftable"></div>
+  <button id="go">Importa</button>
+</div>
+<div id="status"></div>
+<script>
+  const $ = (s) => document.querySelector(s);
+  const status = (t, err) => { $('#status').textContent = t; $('#status').className = err ? 'err' : ''; };
+  const post = (m) => parent.postMessage({ pluginMessage: m }, '*');
+  let data = null;
+
+  function load(text) {
+    try { data = JSON.parse(text); } catch (e) { return status('Il contenuto non è un JSON valido.', true); }
+    status('Controllo i font…');
+    post({ type: 'scan', data });
+  }
+
+  function importNow(fonts, fontScale, fontWeight) {
+    $('#fonts').style.display = 'none';
+    status('Importo…');
+    post({ type: 'import', data, opts: { autoLayout: $('#al').checked, rasterFx: $('#fx').checked, fonts, fontScale: fontScale || {}, fontWeight: fontWeight || {} } });
+  }
+
+  // il browser del plugin vede il font? (stesse misure dei ripieghi = no)
+  const meas = document.createElement('span');
+  meas.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-size:40px';
+  document.body.appendChild(meas);
+  function width(text, css) { meas.style.font = css; meas.textContent = text; return meas.getBoundingClientRect().width; }
+  function hasFont(fam) {
+    const t = 'mmmmmmmmmmlli WQ@#';
+    return ['monospace', 'serif'].some((g) => width(t, `40px "${fam}", ${g}`) !== width(t, `40px ${g}`));
+  }
+  const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const TC = { UPPER: 'uppercase', LOWER: 'lowercase', TITLE: 'capitalize' };
+
+  // Confronto: a sinistra la riga com'è sul sito, a destra col font scelto alla dimensione scelta, stessa scala.
+  const BOX = 175;
+  const fontCss = (fam, px, sm) => `font-family:'${fam.replace(/'/g, '')}',sans-serif;font-size:${px}px;font-weight:${sm.fw};font-style:${sm.it ? 'italic' : 'normal'};letter-spacing:${sm.ls || 0}px;text-transform:${TC[sm.tc] || 'none'}`;
+  function textW(fam, px, sm) {
+    meas.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;' + fontCss(fam, px, sm);
+    meas.textContent = sm.text;
+    return meas.getBoundingClientRect().width;
+  }
+  function siteW(f) { // larghezza della riga sul sito, in px CSS
+    const sm = f.sample;
+    if (f.ink) return f.ink.w;
+    return textW(f.siteFam || 'sans-serif', sm.fs, sm);
+  }
+  function preview(card, f) {
+    const sm = f.sample;
+    if (!sm) return;
+    const fam = card.querySelector('.fam').value, raster = fam === '__raster__';
+    const px = +card.querySelector('.px').value, smw = withWeight(card, sm);
+    const sw = siteW(f), subW = raster ? sw : textW(fam, px, smw);
+    const k = Math.min(1, BOX / Math.max(sw, subW, 1));
+    const site = card.querySelector('.site'), sub = card.querySelector('.sub');
+    const img = sm.img ? `<img src="data:image/png;base64,${sm.img}" style="width:${f.ink ? f.ink.iw * k : Math.min(BOX, sm.w)}px;margin-left:${f.ink ? -f.ink.l * k : 0}px">` : '';
+    site.innerHTML = img || `<span style="${fontCss(f.siteFam || 'sans-serif', sm.fs * k, sm)}">${esc(sm.text)}</span>`;
+    card.querySelector('.sitecap').textContent = `${Math.round(sm.fs)}px` + (img || f.siteFam ? '' : ' · font del sito non disponibile');
+    card.querySelector('.px').style.display = raster ? 'none' : '';
+    card.querySelector('.wt').style.display = raster || !card.querySelector('.wt').options.length ? 'none' : '';
+    card.querySelector('.subcap').textContent = raster ? 'immagine identica al sito' : (hasFont(fam) ? '' : 'anteprima non disponibile per questo font');
+    sub.innerHTML = raster ? site.innerHTML : `<span style="${fontCss(fam, px * k, smw)}">${esc(sm.text)}</span>`;
+  }
+  // riga d'esempio col peso scelto nella tendina
+  const withWeight = (card, sm) => { const o = card.querySelector('.wt').selectedOptions[0]; return o ? Object.assign({}, sm, { fw: +o.dataset.w }) : sm; };
+  // tendina dei pesi della famiglia scelta: quello salvato o il più vicino al peso del sito
+  function weightOptions(sel, list, fw, saved) {
+    sel.innerHTML = (list || []).map((x) => `<option value="${esc(x[0])}" data-w="${x[1]}">${esc(x[0])} · ${x[1]}</option>`).join('');
+    if (!sel.options.length) return;
+    let best = sel.options[0];
+    for (const o of sel.options) {
+      const pen = (x) => Math.abs(+x.dataset.w - fw) + (/condensed|narrow|expanded|wide|display|caption/i.test(x.value) ? 50 : 0);
+      if (pen(o) < pen(best)) best = o;
+    }
+    sel.value = saved && [...sel.options].some((o) => o.value === saved) ? saved : best.value;
+  }
+
+  // dimensione che fa occupare al sostituto la stessa larghezza della riga del sito
+  function fitPx(fam, f) {
+    const sm = f.sample;
+    if (!sm.full || (!f.ink && !f.siteFam) || !hasFont(fam)) return Math.round(sm.fs);
+    const w = textW(fam, sm.fs, f.card ? withWeight(f.card, sm) : sm);
+    return w ? Math.round(sm.fs * siteW(f) / w) : Math.round(sm.fs);
+  }
+
+  // font del sito arrivati con la cattura -> FontFace con un nome privato, per scriverci la riga di esempio
+  let faceN = 0;
+  async function loadSiteFont(f) {
+    if (!f.files || !f.files.length) return null;
+    const name = 'cts-site-' + faceN++;
+    await Promise.all(f.files.map((x) => {
+      const bin = Uint8Array.from(atob(x.data), (c) => c.charCodeAt(0));
+      const face = new FontFace(name, bin.buffer, { weight: String(x.weight).split(' ')[0] || '400', style: x.style || 'normal' });
+      document.fonts.add(face);
+      return face.load().catch(() => null);
+    }));
+    return name;
+  }
+
+  // larghezza reale delle lettere nell'immagine del sito (il box del testo può essere più largo)
+  function inkOf(img, boxW) {
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const g = c.getContext('2d');
+    g.drawImage(img, 0, 0);
+    const d = g.getImageData(0, 0, c.width, c.height).data, bg = [d[0], d[1], d[2]];
+    let l = c.width, r = -1;
+    for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+      const i = (y * c.width + x) * 4;
+      if (Math.abs(d[i] - bg[0]) + Math.abs(d[i + 1] - bg[1]) + Math.abs(d[i + 2] - bg[2]) > 60) { if (x < l) l = x; if (x > r) r = x; }
+    }
+    const s = c.width / boxW; // pixel immagine per px CSS
+    return r < l ? null : { l: l / s, w: (r - l + 1) / s, iw: c.width / s };
+  }
+
+  function sizeOptions(sel, fs) {
+    const lo = Math.max(4, Math.round(fs * 0.5)), hi = Math.round(fs * 1.6), step = fs > 60 ? 2 : 1;
+    let html = '';
+    for (let v = lo; v <= hi; v += step) {
+      const pct = Math.round((v / fs - 1) * 100);
+      html += `<option value="${v}">${v}px${Math.abs(v - fs) < step / 2 + 0.01 ? ' (come il sito)' : ` (${pct > 0 ? '+' : ''}${pct}%)`}</option>`;
+    }
+    sel.innerHTML = html;
+  }
+  function setSize(sel, px) { // valore più vicino tra le opzioni
+    let best = sel.options[0];
+    for (const o of sel.options) if (Math.abs(+o.value - px) < Math.abs(+best.value - px)) best = o;
+    sel.value = best.value;
+  }
+
+  document.addEventListener('paste', (e) => { if (e.target.tagName !== 'INPUT') load(e.clipboardData.getData('text')); });
+  $('#drop').onclick = () => $('#file').click();
+  $('#file').onchange = async (e) => { const f = e.target.files[0]; if (f) load(await f.text()); e.target.value = ''; };
+  const drop = $('#drop');
+  drop.ondragover = (e) => { e.preventDefault(); drop.classList.add('over'); };
+  drop.ondragleave = () => drop.classList.remove('over');
+  drop.ondrop = async (e) => { e.preventDefault(); drop.classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) load(await f.text()); };
+
+  $('#go').onclick = () => {
+    const fonts = {}, fontScale = {}, fontWeight = {};
+    document.querySelectorAll('#ftable .font').forEach((c) => {
+      const name = c.dataset.name.toLowerCase(), fam = c.querySelector('.fam').value, sz = c.querySelector('.px');
+      fonts[name] = fam;
+      if (fam !== '__raster__' && sz.options.length) fontScale[name] = +sz.value / +c.dataset.fs;
+      const wt = c.querySelector('.wt');
+      if (fam !== '__raster__' && wt.value) fontWeight[name] = { family: fam, style: wt.value, fw: +c.dataset.fw };
+    });
+    importNow(fonts, fontScale, fontWeight);
+  };
+
+  onmessage = (e) => {
+    const m = e.data.pluginMessage;
+    if (!m) return;
+    if (m.type === 'fonts') {
+      if (!m.fonts.missing.length) return importNow({});
+      const famOpts = m.fonts.families.map((f) => `<option value="${esc(f)}">${esc(f)}</option>`).join('');
+      $('#ftable').innerHTML = '';
+      for (const f of m.fonts.missing) {
+        const card = document.createElement('div');
+        card.className = 'font';
+        const raster = f.raster ? '<option value="__raster__">Immagine dal sito (non modificabile)</option>' : '';
+        const simOpts = f.similar.length ? `<optgroup label="${f.measured ? 'Più simili (misurati da fonts.sh)' : 'Dello stesso genere'}">${f.similar.map((x) => `<option value="${esc(x)}">${esc(x)}</option>`).join('')}</optgroup>` : '';
+        const sm = f.sample;
+        card.innerHTML = `<div class="hd" title="${esc(f.name)}">${esc(f.name)}<a href="#" title="Dove scaricarlo">↗ scaricalo</a></div>
+          <div class="cmp">
+            <div class="side"><div class="lbl">Sul sito</div><div class="box site"></div><div class="cap sitecap"></div></div>
+            <div class="arrow">→</div>
+            <div class="side"><div class="lbl">In Figma</div><div class="box sub"></div>
+              <select class="fam">${raster}${simOpts}<optgroup label="Tutti i font installati">${famOpts}</optgroup></select>
+              <select class="wt" title="Peso"></select>
+              <select class="px"></select><div class="cap subcap"></div></div>
+          </div>`;
+        card.querySelector('a').onclick = (e) => { e.preventDefault(); post({ type: 'open', url: f.link }); };
+        card.dataset.name = f.name;
+        card.dataset.fs = sm ? sm.fs : 1;
+        card.dataset.fw = sm ? sm.fw : 400;
+        f.card = card;
+        const sel = card.querySelector('.fam'), sz = card.querySelector('.px'), wt = card.querySelector('.wt');
+        sel.value = f.choice;
+        if (sel.value !== f.choice) sel.value = 'Inter';
+        const weights = () => weightOptions(wt, m.fonts.styles[sel.value], +card.dataset.fw, f.weight && f.weight.family === sel.value ? f.weight.style : null);
+        weights();
+        if (!sm) sel.addEventListener('change', weights);
+        if (!sm) { card.querySelector('.cmp').classList.add('nosample'); sz.style.display = 'none'; }
+        else {
+          sizeOptions(sz, sm.fs);
+          const auto = () => setSize(sz, f.scale && sel.value === f.choice ? sm.fs * f.scale : fitPx(sel.value === '__raster__' ? (f.similar[0] || 'Inter') : sel.value, f));
+          const refresh = () => { auto(); preview(card, f); };
+          sel.onchange = () => { f.scale = null; weights(); refresh(); };
+          sz.onchange = () => preview(card, f);
+          wt.onchange = () => { f.scale = null; refresh(); };
+          if (hasFont(f.name)) f.siteFam = f.name; // già visibile al browser del plugin
+          refresh();
+          loadSiteFont(f).then((name) => { if (name) { f.siteFam = name; refresh(); } });
+          if (sm.img) { const im = new Image(); im.onload = () => { f.ink = inkOf(im, sm.w + 2 * sm.m); refresh(); }; im.src = 'data:image/png;base64,' + sm.img; }
+        }
+        $('#ftable').appendChild(card);
+      }
+      $('#fonts').style.display = 'block';
+      status('');
+    }
+    if (m.type === 'progress') status(m.text);
+    if (m.type === 'error') status('Errore: ' + m.text, true);
+    if (m.type === 'done') status(`Fatto: ${m.layers} layer.`
+      + (m.components ? `\n${m.components} componenti interattivi (caroselli/hover, ${m.reactions} interazioni${m.reused ? `, ${m.reused} card come istanze dello stesso componente` : ''}): sono a destra della tavola, prova con Present ▶.` : '')
+      + (m.animated ? `\n${m.animated} animazioni continue (CSS) rifatte con Motion: le vedi nella timeline e nel prototipo.` : '')
+      + (m.animErr && !m.animated ? `\nAnimazioni continue non importate: ${m.animErr}` : '')
+      + (m.linked ? `\n${m.linked} link interni: un clic scorre fino alla sezione.` : '')
+      + (m.stickyAuto ? `\n${m.stickyAuto} elementi sticky (letti dal CSS) già impostati come nel sito.` : '')
+      + (m.stickyLimited ? `\n${m.stickyLimited} elementi sticky (letti dal CSS): li ho lasciati selezionati. Solo per questa volta in questo file: Prototype → Scroll behavior → Position → «Sticky». Dal prossimo import li imposto io.` : '')
+      + (m.raster ? `\n${m.raster} testi importati come immagine dal sito (testo vero nel livello nascosto).` : '')
+      + (m.missing.length ? `\nFont sostituiti: ${m.missing.join(', ')}` : '')
+      + (m.videos ? `\n${m.videos} video importati (partono nel prototipo: Present ▶).` : '')
+      + (m.videoErr && m.videoErr.length ? `\nVideo non importati:\n- ${m.videoErr.join('\n- ')}` : '')
+      + (m.pinFailed ? `\n${m.pinFailed} elementi sticky/fixed non impostati: restano al loro posto ma scorrono.` : ''));
+  };
+</script>

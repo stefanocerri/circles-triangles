@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "Circles&Triangles",
+  "version": "0.1.0",
+  "description": "Cattura la pagina corrente per importarla nel plugin Figma con auto layout, font e immagini.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Circles&Triangles — cattura per Figma",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "circles-triangles@local",
+      "strict_min_version": "128.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

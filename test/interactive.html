@@ -1,0 +1,45 @@
+<!doctype html><meta charset="utf-8"><title>Interazioni</title>
+<style>
+  body { font: 16px Arial, sans-serif; margin: 0; padding: 40px; }
+  .gallery { display: flex; gap: 20px; }
+  .thumbs { display: flex; flex-direction: column; gap: 10px; }
+  .thumbs button { border: 0; padding: 0; background: none; cursor: pointer; }
+  .thumbs img { width: 60px; height: 80px; display: block; }
+  #main img { width: 300px; height: 400px; display: block; }
+  .slider { position: relative; width: 400px; overflow: hidden; margin-top: 40px; }
+  .track { display: flex; transition: transform .3s; }
+  .track div { flex: none; width: 400px; height: 150px; color: #fff; font-size: 40px; display: flex; align-items: center; justify-content: center; }
+  .slider button { position: absolute; top: 55px; }
+  .next { right: 10px; } .prev { left: 10px; }
+  .card { width: 200px; margin-top: 40px; position: relative; }
+  .card img { width: 200px; height: 260px; display: block; transition: opacity .3s; }
+  .card .alt { position: absolute; top: 0; left: 0; opacity: 0; }
+  .card:hover .alt { opacity: 1; }
+  .pc { position: relative; width: 120px; height: 150px; display: inline-block; margin: 10px; }
+  .pc img { width: 120px; height: 150px; display: block; }
+  .pc::after { content: ""; position: absolute; inset: 0; opacity: 0; transition: opacity .3s; background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='150'><rect width='120' height='150' fill='black'/></svg>") center / cover; }
+  .pc:hover::after { opacity: 1; }
+</style>
+<div class="product" style="display:flex;gap:20px">
+<div class="gallery" role="region" aria-roledescription="carousel" aria-label="Immagini articolo">
+  <div class="thumbs">
+    <div role="group" aria-roledescription="slide"><button aria-controls="main" data-src="a"><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='80'><rect width='60' height='80' fill='red'/></svg>"></button></div>
+    <div role="group" aria-roledescription="slide"><button aria-controls="main" data-src="b"><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='80'><rect width='60' height='80' fill='green'/></svg>"></button></div>
+    <div role="group" aria-roledescription="slide"><button aria-controls="main" data-src="c"><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='80'><rect width='60' height='80' fill='blue'/></svg>"></button></div>
+  </div>
+</div>
+<div id="main"><img src=""></div>
+</div>
+<div class="slider"><div class="track"><div style="background:#c33">1 <span class="pc"><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='150'><rect width='120' height='150' fill='yellow'/></svg>"></span></div><div style="background:#3c3">2</div><div style="background:#33c">3</div></div>
+  <button class="prev" aria-label="Precedente">‹</button><button class="next" aria-label="Successiva">›</button></div>
+<span class="pc"><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='150'><rect width='120' height='150' fill='pink'/></svg>"></span>
+<a class="card" href="#"><img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='260'><rect width='200' height='260' fill='orange'/></svg>"><img class="alt" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='260'><rect width='200' height='260' fill='purple'/></svg>"></a>
+<script>
+  const main = document.querySelector('#main img');
+  const show = (b) => { main.src = b.querySelector('img').src; };
+  document.querySelectorAll('.thumbs button').forEach((b) => b.onclick = () => show(b));
+  show(document.querySelector('.thumbs button'));
+  let i = 0; const tr = document.querySelector('.track');
+  const go = (d) => { i = (i + d + 3) % 3; tr.style.transform = `translateX(${-400 * i}px)`; };
+  document.querySelector('.next').onclick = () => go(1); document.querySelector('.prev').onclick = () => go(-1);
+</script>
